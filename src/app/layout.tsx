@@ -98,7 +98,7 @@ const jsonLd = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${grotesk.variable} ${instrument.variable} ${jetbrains.variable}`}>
-      <body className="grain bg-graphite-950 font-sans text-ink antialiased">
+      <body className="grain bg-graphite-950 font-sans text-ink antialiased" suppressHydrationWarning>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

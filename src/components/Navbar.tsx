@@ -163,10 +163,14 @@ export function Navbar() {
               className="flex items-center justify-between"
             >
               <a
-                href={`mailto:${PERSON.email}`}
-                className="font-mono text-[13px] text-ink-soft underline decoration-accent-mint/40 underline-offset-4"
+                href="#contact"
+                onClick={() => setOpen(false)}
+                className="btn-pill bg-ink text-graphite-950 px-5 py-2.5 hover:bg-accent-mint active:scale-[0.98]"
               >
-                {PERSON.email}
+                Let&apos;s talk
+                <span className="grid h-5 w-5 place-items-center rounded-full bg-graphite-950/10">
+                  <span className="text-[13px] leading-none">↗</span>
+                </span>
               </a>
               <div className="flex items-center gap-3">
                 <a href={PERSON.github} target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="grid h-10 w-10 place-items-center rounded-full border border-white/10 text-ink-soft transition-colors duration-500 hover:text-accent-mint">

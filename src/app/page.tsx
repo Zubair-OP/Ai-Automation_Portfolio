@@ -8,10 +8,12 @@ import { Skills } from '@/components/sections/Skills'
 import { Journey } from '@/components/sections/Journey'
 import { Contact } from '@/components/sections/Contact'
 import { Footer } from '@/components/Footer'
+import { HashSpy } from '@/components/HashSpy'
 
 export default function Home() {
   return (
     <>
+      <HashSpy />
       <Navbar />
       <main>
         <Hero />
