@@ -1,0 +1,154 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #060708;
+  --surface: #0A0C0E;
+  --hairline: rgba(237, 241, 244, 0.09);
+  --hairline-strong: rgba(237, 241, 244, 0.16);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-flow: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 6rem;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-graphite-950 text-ink font-sans antialiased;
+    overscroll-behavior-y: none;
+  }
+
+  ::selection {
+    background: rgba(61, 246, 201, 0.22);
+    color: #EDF1F4;
+  }
+
+  /* Refined thin scrollbar */
+  ::-webkit-scrollbar {
+    width: 9px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #060708;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1A1F25;
+    border-radius: 999px;
+    border: 2px solid #060708;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #2A313A;
+  }
+
+  :focus-visible {
+    outline: 2px solid rgba(61, 246, 201, 0.7);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+}
+
+@layer utilities {
+  /* Hairline borders — no solid gray */
+  .hairline {
+    border: 1px solid var(--hairline);
+  }
+  .hairline-b {
+    border-bottom: 1px solid var(--hairline);
+  }
+  .hairline-t {
+    border-top: 1px solid var(--hairline);
+  }
+
+  /* Double-bezel shell */
+  .bezel {
+    @apply rounded-[2rem] bg-white/[0.03] border border-white/10 p-1.5;
+  }
+  .bezel-core {
+    @apply rounded-[calc(2rem-0.375rem)] bg-graphite-900 border border-white/[0.06] shadow-inner-hi overflow-hidden;
+  }
+
+  /* Fluid pill button */
+  .btn-pill {
+    @apply inline-flex items-center gap-3 rounded-full text-[13.5px] font-medium transition-all duration-500;
+    transition-timing-function: var(--ease-flow);
+  }
+
+  .magnetic-btn {
+    transition: transform 0.6s var(--ease-flow), box-shadow 0.6s var(--ease-flow), background-color 0.5s var(--ease-flow);
+  }
+
+  .magnetic-btn:active {
+    transform: scale(0.97);
+  }
+
+  /* Text gradient for hero accent */
+  .text-glow {
+    background: linear-gradient(100deg, #3DF6C9 0%, #8FF5DF 45%, #FFB454 110%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Grid texture for technical background */
+  .grid-faint {
+    background-image:
+      linear-gradient(rgba(237, 241, 244, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(237, 241, 244, 0.035) 1px, transparent 1px);
+    background-size: 72px 72px;
+  }
+
+  /* Dotted texture */
+  .dots-faint {
+    background-image: radial-gradient(rgba(237, 241, 244, 0.05) 1px, transparent 1px);
+    background-size: 26px 26px;
+  }
+
+  /* Film grain — fixed, pointer-events-none only */
+  .grain::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0.032;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Radial spotlight that follows a section cursor */
+  .spotlight {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      560px circle at var(--mx, 50%) var(--my, 40%),
+      rgba(96, 165, 250, 0.07),
+      transparent 62%
+    );
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Noise + reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
