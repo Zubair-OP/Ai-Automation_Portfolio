@@ -87,7 +87,7 @@ export function Contact() {
   }
 
   return (
-    <section id="contact" className="relative scroll-mt-24 border-t border-white/[0.06] py-28 lg:py-40">
+    <section id="contact" className="relative scroll-mt-24 border-t border-white/[0.06] py-24 lg:py-32">
       <div className="mx-auto max-w-8xl px-5 sm:px-6 lg:px-10">
         <div className="grid gap-14 lg:grid-cols-12 lg:gap-16">
           {/* Left — editorial CTA + channels */}

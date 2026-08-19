@@ -17,8 +17,8 @@ export interface Project {
 export const PROJECTS: Project[] = [
   {
     idx: '01',
-    title: 'Snitch — AI Commerce',
-    kind: 'Full-stack + AI',
+    title: 'Snitch — AI-Powered E-Commerce Platform',
+    kind: 'Full-Stack + AI',
     blurb: 'E-commerce platform with a live AI shopping assistant.',
     desc: 'A complete e-commerce platform with separate seller & buyer dashboards, plus an AI shopping assistant. Streams answers in real time via SSE — LangChain orchestrates the prompt graph, Groq powers the inference.',
     stack: ['MERN', 'LangChain', 'Groq API', 'SSE', 'Tailwind'],
@@ -31,7 +31,7 @@ export const PROJECTS: Project[] = [
   },
   {
     idx: '02',
-    title: 'Multi-Agent Arena',
+    title: 'Multi-Agent AI Orchestration System',
     kind: 'AI Orchestration',
     blurb: 'LLM agents that collaborate — or compete — on one brief.',
     desc: 'A coordination layer where autonomous LLM agents collaborate — or compete — to solve a single brief in real time. Built on a websocket message bus and a task router.',
@@ -45,7 +45,7 @@ export const PROJECTS: Project[] = [
   },
   {
     idx: '03',
-    title: 'Streaming Chat',
+    title: 'AI Chat Assistant — Real-Time Streaming',
     kind: 'Realtime AI',
     blurb: 'A Perplexity-style answer engine with token streaming.',
     desc: 'A Perplexity-style answer engine — streaming tokens, voice input, per-session memory. Tuned for sub-300ms first-token latency.',
@@ -59,7 +59,7 @@ export const PROJECTS: Project[] = [
   },
   {
     idx: '04',
-    title: 'Moodify',
+    title: 'Moodify — AI Mood Classifier & Music Router',
     kind: 'ML × Music',
     blurb: 'Detects mood from text and routes the perfect playlist.',
     desc: 'Detects mood from a short message and routes a matching Spotify playlist. Backed by a tiny classifier served from an Express endpoint.',

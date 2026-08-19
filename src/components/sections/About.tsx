@@ -46,7 +46,7 @@ function CountUp({ to, suffix }: { to: number; suffix: string }) {
 
 export function About() {
   return (
-    <section id="about" className="relative scroll-mt-24 py-28 lg:py-40">
+    <section id="about" className="relative scroll-mt-24 py-24 lg:py-32">
       <div className="mx-auto max-w-8xl px-5 sm:px-6 lg:px-10">
         <SectionHead
           index="01"

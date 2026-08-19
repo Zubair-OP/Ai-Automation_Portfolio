@@ -1,611 +1,438 @@
 'use client'
 
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import * as THREE from 'three'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 
-interface Quality {
-  nodes: number
-  dust: number
-  dpr: number
-  coarse: boolean
-  reduced: boolean
+interface Node {
+  homeX: number
+  homeY: number
+  x: number
+  y: number
+  vx: number
+  vy: number
+  seed: number
+  radius: number
+  connections: number[]
+  cluster: number
 }
 
-function detectQuality(): Quality {
-  if (typeof window === 'undefined') {
-    return { nodes: 170, dust: 40, dpr: 1.75, coarse: false, reduced: false }
+interface Pulse {
+  fromIdx: number
+  toIdx: number
+  t: number
+  speed: number
+}
+
+interface Cluster {
+  cx: number
+  cy: number
+  count: number
+  spread: number
+}
+
+const CLUSTER_COUNT = 5
+const NODES_PER_CLUSTER = [7, 8, 6, 7, 5] // total ~33 nodes
+const EDGE_COLOR = [0.22, 0.48, 0.88]
+const EDGE_ACTIVE_COLOR = [0.45, 0.75, 1.0]
+const NODE_COLOR = [0.16, 0.42, 0.95]
+const NODE_ACTIVE_COLOR = [0.55, 0.8, 1.0]
+const NODE_DIM_COLOR = [0.12, 0.18, 0.32]
+const CURSOR_RADIUS = 120
+const MAX_CONNECTIONS_PER_NODE = 3
+
+function createClusters(w: number, h: number): Cluster[] {
+  const clusters: Cluster[] = []
+  const padding = 0.15
+  // Place clusters intentionally — avoid center-left where headline sits
+  const positions = [
+    { x: 0.68, y: 0.28 }, // top-right
+    { x: 0.78, y: 0.55 }, // right-mid
+    { x: 0.58, y: 0.72 }, // bottom-center-right
+    { x: 0.88, y: 0.38 }, // far right top
+    { x: 0.72, y: 0.82 }, // bottom right
+  ]
+  for (let i = 0; i < CLUSTER_COUNT; i++) {
+    const p = positions[i]
+    clusters.push({
+      cx: w * (p.x + (Math.random() - 0.5) * padding),
+      cy: h * (p.y + (Math.random() - 0.5) * padding),
+      count: NODES_PER_CLUSTER[i],
+      spread: 40 + Math.random() * 30,
+    })
   }
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  const coarse = window.matchMedia('(pointer: coarse)').matches
-  const cores = navigator.hardwareConcurrency ?? 8
-  const low = coarse || cores <= 4
-  return {
-    nodes: low ? 92 : 170,
-    dust: low ? 20 : 40,
-    dpr: low ? 1 : Math.min(window.devicePixelRatio, 1.75),
-    coarse,
-    reduced,
+  return clusters
+}
+
+function generateNodes(w: number, h: number): Node[] {
+  const clusters = createClusters(w, h)
+  const nodes: Node[] = []
+
+  for (let c = 0; c < clusters.length; c++) {
+    const cl = clusters[c]
+    for (let i = 0; i < cl.count; i++) {
+      const angle = Math.random() * Math.PI * 2
+      const dist = Math.random() * cl.spread
+      const x = cl.cx + Math.cos(angle) * dist
+      const y = cl.cy + Math.sin(angle) * dist
+      nodes.push({
+        homeX: x,
+        homeY: y,
+        x,
+        y,
+        vx: 0,
+        vy: 0,
+        seed: Math.random() * Math.PI * 2,
+        radius: 1.5 + Math.random() * 1.2,
+        connections: [],
+        cluster: c,
+      })
+    }
   }
-}
 
-/**
- * Bright core with a wide soft halo — reads as a glowing neuron body.
- */
-function makeGlowTexture(): THREE.CanvasTexture {
-  const size = 128
-  const c = document.createElement('canvas')
-  c.width = c.height = size
-  const ctx = c.getContext('2d')!
-  const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2)
-  g.addColorStop(0, 'rgba(255,255,255,1)')
-  g.addColorStop(0.16, 'rgba(255,255,255,0.92)')
-  g.addColorStop(0.42, 'rgba(255,255,255,0.3)')
-  g.addColorStop(1, 'rgba(255,255,255,0)')
-  ctx.fillStyle = g
-  ctx.fillRect(0, 0, size, size)
-  return new THREE.CanvasTexture(c)
-}
+  // Create sparse connections within clusters (1-3 per node)
+  for (let i = 0; i < nodes.length; i++) {
+    const a = nodes[i]
+    if (a.connections.length >= MAX_CONNECTIONS_PER_NODE) continue
 
-const X_BOUND = 21
-const Y_BOUND = 12
-const Z_BOUND = 4.5
-const LINK_DIST = 5.4
-const CURSOR_RADIUS = 6.6
-const MAX_CURSOR_LINKS = 7
-const CLUSTERS = 8
-
-/** Electric blue palette — nodes, edges, pulses and cursor orb. */
-const C_BLUE = [0.16, 0.42, 0.95] // resting node
-const C_BLUE_ACTIVE = [0.55, 0.8, 1.0] // node near cursor
-const C_EDGE = [0.22, 0.5, 1.0]
-const C_CURSOR = [0.7, 0.9, 1.0]
-
-function generateNodes(count: number) {
-  const home = new Float32Array(count * 3)
-  const pos = new Float32Array(count * 3)
-  const vel = new Float32Array(count * 3)
-  const seed = new Float32Array(count)
-  const radius = new Float32Array(count)
-
-  const centers = Array.from({ length: CLUSTERS }, () => ({
-    x: (Math.random() * 2 - 1) * X_BOUND * 0.72,
-    y: (Math.random() * 2 - 1) * Y_BOUND * 0.72,
-    z: (Math.random() * 2 - 1) * Z_BOUND * 0.8,
-  }))
-
-  for (let i = 0; i < count; i++) {
-    let x: number
-    let y: number
-    let z: number
-    // ~60% of nodes cluster into "neural tissue", the rest form sparse long-range links
-    if (Math.random() < 0.6) {
-      const c = centers[Math.floor(Math.random() * centers.length)]
-      x = THREE.MathUtils.clamp(c.x + (Math.random() * 2 - 1) * 3.4, -X_BOUND, X_BOUND)
-      y = THREE.MathUtils.clamp(c.y + (Math.random() * 2 - 1) * 3.4, -Y_BOUND, Y_BOUND)
-      z = THREE.MathUtils.clamp(c.z + (Math.random() * 2 - 1) * 1.6, -Z_BOUND, Z_BOUND)
-    } else {
-      x = (Math.random() * 2 - 1) * X_BOUND
-      y = (Math.random() * 2 - 1) * Y_BOUND
-      z = (Math.random() * 2 - 1) * Z_BOUND
+    // Find nearest nodes in same or adjacent cluster
+    const candidates: { idx: number; dist: number }[] = []
+    for (let j = i + 1; j < nodes.length; j++) {
+      if (a.connections.length >= MAX_CONNECTIONS_PER_NODE) break
+      const b = nodes[j]
+      if (b.connections.length >= MAX_CONNECTIONS_PER_NODE) continue
+      const dx = a.homeX - b.homeX
+      const dy = a.homeY - b.homeY
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      // Only connect if reasonably close and prefer same cluster
+      const sameCluster = a.cluster === b.cluster
+      const maxDist = sameCluster ? 140 : 180
+      if (dist < maxDist) {
+        candidates.push({ idx: j, dist })
+      }
     }
-    home[i * 3] = x
-    home[i * 3 + 1] = y
-    home[i * 3 + 2] = z
-    pos[i * 3] = x
-    pos[i * 3 + 1] = y
-    pos[i * 3 + 2] = z
-    seed[i] = Math.random() * Math.PI * 2
-    radius[i] = 0.9 + Math.random() * 0.6
+    // Sort by distance, take closest
+    candidates.sort((p, q) => p.dist - q.dist)
+    const take = Math.min(MAX_CONNECTIONS_PER_NODE - a.connections.length, candidates.length, 2)
+    for (let k = 0; k < take; k++) {
+      const j = candidates[k].idx
+      a.connections.push(j)
+      nodes[j].connections.push(i)
+    }
   }
-  return { home, pos, vel, seed, radius, count }
-}
 
-function NeuralField({ quality, active }: { quality: Quality; active: { current: boolean } }) {
-  const { viewport, pointer } = useThree()
-
-  const group = useRef<THREE.Group>(null)
-  const pointsRef = useRef<THREE.Points>(null)
-  const linesRef = useRef<THREE.LineSegments>(null)
-  const pulsesRef = useRef<THREE.Points>(null)
-  const dustRef = useRef<THREE.Points>(null)
-  const cursorOrbRef = useRef<THREE.Sprite>(null)
-
-  const cursorWorld = useRef(new THREE.Vector3(0, 0, 0))
-  const target = useRef(new THREE.Vector3(0, 0, 0))
-  const t0 = useRef(Math.random() * 100)
-
-  const glow = useMemo(makeGlowTexture, [])
-
-  const sim = useMemo(() => generateNodes(quality.nodes), [quality.nodes])
-
-  // Edges + line buffers (pre-allocated)
-  const links = useMemo(() => {
-    const { count } = sim
-    const edges: [number, number][] = []
-    for (let a = 0; a < count; a++) {
-      for (let b = a + 1; b < count; b++) {
-        const ax = sim.home[a * 3]
-        const ay = sim.home[a * 3 + 1]
-        const az = sim.home[a * 3 + 2]
-        const bx = sim.home[b * 3]
-        const by = sim.home[b * 3 + 1]
-        const bz = sim.home[b * 3 + 2]
-        const dx = ax - bx
-        const dy = ay - by
-        const dz = az - bz
-        if (dx * dx + dy * dy + dz * dz < LINK_DIST * LINK_DIST) {
-          edges.push([a, b])
-          if (edges.length >= 620) break
-        }
-      }
-      if (edges.length >= 620) break
-    }
-
-    const total = edges.length + MAX_CURSOR_LINKS
-    const positions = new Float32Array(total * 2 * 3)
-    const colors = new Float32Array(total * 2 * 3)
-    for (let e = 0; e < edges.length; e++) {
-      const [a, b] = edges[e]
-      const a3 = a * 3
-      const b3 = b * 3
-      const e6 = e * 6
-      positions[e6] = sim.home[a3]
-      positions[e6 + 1] = sim.home[a3 + 1]
-      positions[e6 + 2] = sim.home[a3 + 2]
-      positions[e6 + 3] = sim.home[b3]
-      positions[e6 + 4] = sim.home[b3 + 1]
-      positions[e6 + 5] = sim.home[b3 + 2]
-      colors[e6] = C_EDGE[0]
-      colors[e6 + 1] = C_EDGE[1]
-      colors[e6 + 2] = C_EDGE[2]
-      colors[e6 + 3] = C_EDGE[0]
-      colors[e6 + 4] = C_EDGE[1]
-      colors[e6 + 5] = C_EDGE[2]
-    }
-    for (let e = edges.length; e < total; e++) {
-      const e6 = e * 6
-      positions[e6] = positions[e6 + 3] = 9999
-      positions[e6 + 1] = positions[e6 + 4] = 9999
-      positions[e6 + 2] = positions[e6 + 5] = 9999
-    }
-    return { edges, total, positions, colors }
-  }, [sim])
-
-  // Pulse dots — one travelling signal per edge, plus cursor-edge pulses
-  const pulses = useMemo(() => {
-    const n = links.edges.length + MAX_CURSOR_LINKS
-    const positions = new Float32Array(n * 3)
-    const colors = new Float32Array(n * 3)
-    const phase = new Float32Array(n)
-    for (let i = 0; i < n; i++) {
-      phase[i] = Math.random()
-      const i3 = i * 3
-      positions[i3] = positions[i3 + 1] = positions[i3 + 2] = 9999
-    }
-    return { positions, colors, phase, n }
-  }, [links.edges.length])
-
-  // Node point buffers (pre-filled so static/reduced-motion renders too)
-  const pointBuffers = useMemo(() => {
-    const { count } = sim
-    const positions = new Float32Array(count * 3)
-    const colors = new Float32Array(count * 3)
-    for (let i = 0; i < count; i++) {
-      positions[i * 3] = sim.home[i * 3]
-      positions[i * 3 + 1] = sim.home[i * 3 + 1]
-      positions[i * 3 + 2] = sim.home[i * 3 + 2]
-      colors[i * 3] = C_BLUE[0]
-      colors[i * 3 + 1] = C_BLUE[1]
-      colors[i * 3 + 2] = C_BLUE[2]
-    }
-    return { positions, colors }
-  }, [sim])
-
-  // Dust layer — faint background starfield
-  const dustBuffers = useMemo(() => {
-    const n = quality.dust
-    const positions = new Float32Array(n * 3)
-    const colors = new Float32Array(n * 3)
-    for (let i = 0; i < n; i++) {
-      positions[i * 3] = (Math.random() * 2 - 1) * X_BOUND * 1.3
-      positions[i * 3 + 1] = (Math.random() * 2 - 1) * Y_BOUND * 1.25
-      positions[i * 3 + 2] = (Math.random() * 2 - 1) * 8 - 2
-      colors[i * 3] = 0.12
-      colors[i * 3 + 1] = 0.2
-      colors[i * 3 + 2] = 0.42
-    }
-    return { positions, colors, n }
-  }, [quality.dust])
-
-  useFrame(({ clock }) => {
-    if (!active.current) return
-    if (quality.reduced) return
-
-    const t = clock.getElapsedTime() + t0.current
-    const dt = Math.min(clock.getDelta(), 0.05)
-
-    // Smooth cursor interpolation — never instant
-    const tx = (pointer.x * viewport.width) / 2
-    const ty = (pointer.y * viewport.height) / 2
-    target.current.set(quality.coarse ? 0 : tx, quality.coarse ? 0 : ty, 0)
-    cursorWorld.current.lerp(target.current, 0.05)
-    const cx = cursorWorld.current.x
-    const cy = cursorWorld.current.y
-
-    // Depth parallax: whole network tilts and shifts as the cursor moves
-    if (group.current) {
-      group.current.rotation.y = -cx * 0.008
-      group.current.rotation.x = cy * 0.006
-      group.current.position.x = -cx * 0.012
-      group.current.position.y = -cy * 0.012
-    }
-
-    const { pos, vel, seed, radius, count } = sim
-    const pPos = pointBuffers.positions
-    const pCol = pointBuffers.colors
-
-    let nearest: { idx: number; d: number }[] = []
-
-    for (let i = 0; i < count; i++) {
-      const i3 = i * 3
-      const x = pos[i3]
-      const y = pos[i3 + 1]
-      const z = pos[i3 + 2]
-      const s = seed[i]
-      const r = radius[i]
-
-      // Gentle autonomous drift around home
-      vel[i3] += (Math.sin(t * 0.32 + s) * 0.12 + (sim.home[i3] - x) * 0.0011) * r
-      vel[i3 + 1] += (Math.cos(t * 0.28 + s * 1.7) * 0.12 + (sim.home[i3 + 1] - y) * 0.0011) * r
-      vel[i3 + 2] += (Math.sin(t * 0.24 + s * 2.3) * 0.06 + (sim.home[i3 + 2] - z) * 0.0011) * r
-
-      // Cursor repulsion — neurons part around the pointer
-      if (!quality.coarse) {
-        const dx = x - cx
-        const dy = y - cy
-        const d2 = dx * dx + dy * dy
-        if (d2 < CURSOR_RADIUS * CURSOR_RADIUS && d2 > 0.0001) {
-          const d = Math.sqrt(d2)
-          const fall = (1 - d / CURSOR_RADIUS) * 0.5
-          vel[i3] += (dx / d) * fall * dt * 60 * 0.38
-          vel[i3 + 1] += (dy / d) * fall * dt * 60 * 0.38
-        }
-      }
-
-      vel[i3] *= 0.962
-      vel[i3 + 1] *= 0.962
-      vel[i3 + 2] *= 0.962
-
-      const nx = x + vel[i3] * dt * 60 * 0.06
-      const ny = y + vel[i3 + 1] * dt * 60 * 0.06
-      const nz = z + vel[i3 + 2] * dt * 60 * 0.06
-      pos[i3] = nx
-      pos[i3 + 1] = ny
-      pos[i3 + 2] = nz
-
-      // Parallax by depth
-      const pp = 0.014 * (z / Z_BOUND)
-      pPos[i3] = nx + cx * pp
-      pPos[i3 + 1] = ny + cy * pp
-      pPos[i3 + 2] = nz
-
-      // Color — resting blue, bright electric blue near the cursor
-      let boost = 0
-      if (!quality.coarse) {
-        const dx = nx - cx
-        const dy = ny - cy
-        const d2 = dx * dx + dy * dy
-        if (d2 < CURSOR_RADIUS * CURSOR_RADIUS) {
-          boost = (1 - Math.sqrt(d2) / CURSOR_RADIUS) * 0.95
-        }
-      }
-      pCol[i3] = C_BLUE[0] + (C_BLUE_ACTIVE[0] - C_BLUE[0]) * boost
-      pCol[i3 + 1] = C_BLUE[1] + (C_BLUE_ACTIVE[1] - C_BLUE[1]) * boost
-      pCol[i3 + 2] = C_BLUE[2] + (C_BLUE_ACTIVE[2] - C_BLUE[2]) * boost
-
-      if (!quality.coarse) {
-        const dx = nx - cx
-        const dy = ny - cy
-        nearest.push({ idx: i, d: dx * dx + dy * dy })
-      }
-    }
-
-    const geo = pointsRef.current?.geometry as THREE.BufferGeometry | undefined
-    if (geo) {
-      geo.attributes.position.needsUpdate = true
-      geo.attributes.color.needsUpdate = true
-    }
-
-    // ---- Edges ----
-    const lPos = links.positions
-    const lCol = links.colors
-    const { edges } = links
-
-    for (let e = 0; e < edges.length; e++) {
-      const [a, b] = edges[e]
-      const a3 = a * 3
-      const b3 = b * 3
-      const dx = pPos[a3] - pPos[b3]
-      const dy = pPos[a3 + 1] - pPos[b3 + 1]
-      const dz = pPos[a3 + 2] - pPos[b3 + 2]
-      const d = Math.sqrt(dx * dx + dy * dy + dz * dz)
-
-      const e6 = e * 6
-      if (d < LINK_DIST) {
-        const alpha = 1 - d / LINK_DIST
-        // edges closer to the cursor glow brighter
-        let cBoost = 0
-        if (!quality.coarse) {
-          const mx = (pPos[a3] + pPos[b3]) / 2
-          const my = (pPos[a3 + 1] + pPos[b3 + 1]) / 2
-          const mdx = mx - cx
-          const mdy = my - cy
-          const md = Math.sqrt(mdx * mdx + mdy * mdy)
-          if (md < CURSOR_RADIUS) cBoost = (1 - md / CURSOR_RADIUS) * 0.55
-        }
-        const b0 = Math.min(0.95, C_EDGE[0] * (0.45 + alpha * 1.1) + cBoost)
-        const b1 = Math.min(0.98, C_EDGE[1] * (0.45 + alpha * 1.1) + cBoost)
-        const b2 = Math.min(1, C_EDGE[2] * (0.5 + alpha * 1.1) + cBoost * 1.2)
-        lPos[e6] = pPos[a3]
-        lPos[e6 + 1] = pPos[a3 + 1]
-        lPos[e6 + 2] = pPos[a3 + 2]
-        lPos[e6 + 3] = pPos[b3]
-        lPos[e6 + 4] = pPos[b3 + 1]
-        lPos[e6 + 5] = pPos[b3 + 2]
-        lCol[e6] = lCol[e6 + 3] = b0
-        lCol[e6 + 1] = lCol[e6 + 4] = b1
-        lCol[e6 + 2] = lCol[e6 + 5] = b2
-      } else {
-        lPos[e6] = lPos[e6 + 3] = 9999
-        lPos[e6 + 1] = lPos[e6 + 4] = 9999
-        lPos[e6 + 2] = lPos[e6 + 5] = 9999
-        lCol[e6] = lCol[e6 + 3] = 0
-        lCol[e6 + 1] = lCol[e6 + 4] = 0
-        lCol[e6 + 2] = lCol[e6 + 5] = 0
-      }
-    }
-
-    // ---- Cursor to neuron links ----
-    const base = edges.length
-    let picks: { idx: number; d: number }[] = []
-    if (!quality.coarse) {
-      nearest.sort((p, q) => p.d - q.d)
-      picks = nearest.slice(0, MAX_CURSOR_LINKS)
-    }
-    for (let k = 0; k < MAX_CURSOR_LINKS; k++) {
-      const e6 = (base + k) * 6
-      const hit = picks[k] && picks[k].d < CURSOR_RADIUS * CURSOR_RADIUS
-      if (hit) {
-        const n = picks[k].idx
-        const n3 = n * 3
-        const fade = 1 - Math.sqrt(picks[k].d) / CURSOR_RADIUS
-        const v = C_CURSOR[0] * (0.35 + fade * 0.65)
-        const v1 = C_CURSOR[1] * (0.35 + fade * 0.65)
-        const v2 = C_CURSOR[2] * (0.35 + fade * 0.65)
-        lPos[e6] = cx
-        lPos[e6 + 1] = cy
-        lPos[e6 + 2] = 0
-        lPos[e6 + 3] = pPos[n3]
-        lPos[e6 + 4] = pPos[n3 + 1]
-        lPos[e6 + 5] = pPos[n3 + 2]
-        lCol[e6] = lCol[e6 + 3] = v
-        lCol[e6 + 1] = lCol[e6 + 4] = v1
-        lCol[e6 + 2] = lCol[e6 + 5] = v2
-      } else {
-        lPos[e6] = lPos[e6 + 3] = 9999
-        lPos[e6 + 1] = lPos[e6 + 4] = 9999
-        lPos[e6 + 2] = lPos[e6 + 5] = 9999
-        lCol[e6] = lCol[e6 + 3] = 0
-        lCol[e6 + 1] = lCol[e6 + 4] = 0
-        lCol[e6 + 2] = lCol[e6 + 5] = 0
-      }
-    }
-
-    const lgeo = linesRef.current?.geometry as THREE.BufferGeometry | undefined
-    if (lgeo) {
-      lgeo.attributes.position.needsUpdate = true
-      lgeo.attributes.color.needsUpdate = true
-    }
-
-    // ---- Signal pulses travelling along every visible edge ----
-    const puPos = pulses.positions
-    const puCol = pulses.colors
-    const pulseN = pulses.n
-    const phase = pulses.phase
-    const pulseSpeed = 0.5
-
-    for (let e = 0; e < pulseN; e++) {
-      const i3 = e * 3
-      if (e < edges.length) {
-        const [a, b] = edges[e]
-        const a3 = a * 3
-        const b3 = b * 3
-        const dx = pPos[a3] - pPos[b3]
-        const dy = pPos[a3 + 1] - pPos[b3 + 1]
-        const dz = pPos[a3 + 2] - pPos[b3 + 2]
-        const d = Math.sqrt(dx * dx + dy * dy + dz * dz)
-        if (d < LINK_DIST) {
-          const prog = (t * pulseSpeed * (0.7 + phase[e] * 0.6) + phase[e]) % 1
-          puPos[i3] = pPos[a3] + (pPos[b3] - pPos[a3]) * prog
-          puPos[i3 + 1] = pPos[a3 + 1] + (pPos[b3 + 1] - pPos[a3 + 1]) * prog
-          puPos[i3 + 2] = pPos[a3 + 2] + (pPos[b3 + 2] - pPos[a3 + 2]) * prog
-          puCol[i3] = 0.45
-          puCol[i3 + 1] = 0.78
-          puCol[i3 + 2] = 1.0
-        } else {
-          puPos[i3] = puPos[i3 + 1] = puPos[i3 + 2] = 9999
-          puCol[i3] = puCol[i3 + 1] = puCol[i3 + 2] = 0
-        }
-      } else if (!quality.coarse) {
-        // pulses firing from the cursor toward linked neurons
-        const k = e - edges.length
-        const pick = picks[k]
-        if (pick && pick.d < CURSOR_RADIUS * CURSOR_RADIUS) {
-          const n3 = pick.idx * 3
-          const prog = (t * pulseSpeed * 1.5 + phase[e]) % 1
-          puPos[i3] = cx + (pPos[n3] - cx) * prog
-          puPos[i3 + 1] = cy + (pPos[n3 + 1] - cy) * prog
-          puPos[i3 + 2] = pPos[n3 + 2] * prog
-          puCol[i3] = 0.85
-          puCol[i3 + 1] = 0.95
-          puCol[i3 + 2] = 1.0
-        } else {
-          puPos[i3] = puPos[i3 + 1] = puPos[i3 + 2] = 9999
-          puCol[i3] = puCol[i3 + 1] = puCol[i3 + 2] = 0
-        }
-      } else {
-        puPos[i3] = puPos[i3 + 1] = puPos[i3 + 2] = 9999
-        puCol[i3] = puCol[i3 + 1] = puCol[i3 + 2] = 0
-      }
-    }
-
-    const pgeo = pulsesRef.current?.geometry as THREE.BufferGeometry | undefined
-    if (pgeo) {
-      pgeo.attributes.position.needsUpdate = true
-      pgeo.attributes.color.needsUpdate = true
-    }
-
-    // ---- Cursor orb (the cursor is a neuron) ----
-    if (cursorOrbRef.current) {
-      if (quality.coarse) {
-        cursorOrbRef.current.visible = false
-      } else {
-        cursorOrbRef.current.visible = true
-        cursorOrbRef.current.position.set(cx, cy, 0)
-        const breathe = 1.15 + Math.sin(t * 3.2) * 0.18
-        cursorOrbRef.current.scale.set(2.4 * breathe, 2.4 * breathe, 1)
-      }
-    }
-
-    // Dust slow drift
-    const dustGeo = dustRef.current?.geometry as THREE.BufferGeometry | undefined
-    if (dustGeo) {
-      const dp = dustGeo.attributes.position as THREE.BufferAttribute
-      for (let i = 0; i < dustBuffers.n; i++) {
-        const i3 = i * 3
-        dp.array[i3] += Math.sin(t * 0.1 + i) * 0.004
-        dp.array[i3 + 1] += Math.cos(t * 0.08 + i * 2) * 0.004
-      }
-      dp.needsUpdate = true
-    }
-  })
-
-  return (
-    <group ref={group}>
-      <points ref={pointsRef}>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" args={[pointBuffers.positions, 3]} />
-          <bufferAttribute attach="attributes-color" args={[pointBuffers.colors, 3]} />
-        </bufferGeometry>
-        <pointsMaterial
-          size={0.55}
-          map={glow}
-          vertexColors
-          transparent
-          opacity={0.95}
-          depthWrite={false}
-          sizeAttenuation
-          blending={THREE.AdditiveBlending}
-        />
-      </points>
-
-      <lineSegments ref={linesRef}>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" args={[links.positions, 3]} />
-          <bufferAttribute attach="attributes-color" args={[links.colors, 3]} />
-        </bufferGeometry>
-        <lineBasicMaterial
-          vertexColors
-          transparent
-          opacity={0.9}
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-        />
-      </lineSegments>
-
-      <points ref={pulsesRef}>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" args={[pulses.positions, 3]} />
-          <bufferAttribute attach="attributes-color" args={[pulses.colors, 3]} />
-        </bufferGeometry>
-        <pointsMaterial
-          size={0.42}
-          map={glow}
-          vertexColors
-          transparent
-          opacity={1}
-          depthWrite={false}
-          sizeAttenuation
-          blending={THREE.AdditiveBlending}
-        />
-      </points>
-
-      <points ref={dustRef}>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" args={[dustBuffers.positions, 3]} />
-          <bufferAttribute attach="attributes-color" args={[dustBuffers.colors, 3]} />
-        </bufferGeometry>
-        <pointsMaterial
-          size={0.16}
-          map={glow}
-          vertexColors
-          transparent
-          opacity={0.5}
-          depthWrite={false}
-          sizeAttenuation
-          blending={THREE.AdditiveBlending}
-        />
-      </points>
-
-      <sprite ref={cursorOrbRef}>
-        <spriteMaterial
-          map={glow}
-          color="#7CC4FF"
-          transparent
-          opacity={0.95}
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-        />
-      </sprite>
-    </group>
-  )
+  return nodes
 }
 
 export function NeuralCanvas({ className }: { className?: string }) {
-  const [quality] = useState(detectQuality)
-  const active = useRef(true)
-  const container = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const nodesRef = useRef<Node[]>([])
+  const pulsesRef = useRef<Pulse[]>([])
+  const mouseRef = useRef({ x: -9999, y: -9999 })
+  const smoothMouseRef = useRef({ x: -9999, y: -9999 })
+  const rafRef = useRef<number>(0)
+  const activeRef = useRef(true)
+  const sizeRef = useRef({ w: 0, h: 0 })
 
-  useEffect(() => {
-    const el = container.current
-    if (!el) return
-    const io = new IntersectionObserver(([entry]) => {
-      active.current = entry.isIntersecting
-    })
-    io.observe(el)
-    const onVis = () => {
-      active.current = !document.hidden
-    }
-    document.addEventListener('visibilitychange', onVis)
-    return () => {
-      io.disconnect()
-      document.removeEventListener('visibilitychange', onVis)
-    }
+  const initNodes = useCallback(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const rect = canvas.getBoundingClientRect()
+    const dpr = Math.min(window.devicePixelRatio, 2)
+    canvas.width = rect.width * dpr
+    canvas.height = rect.height * dpr
+    sizeRef.current = { w: rect.width, h: rect.height }
+    nodesRef.current = generateNodes(rect.width, rect.height)
+    pulsesRef.current = []
   }, [])
 
+  useEffect(() => {
+    initNodes()
+
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const ctx = canvas.getContext('2d', { alpha: true })
+    if (!ctx) return
+
+    const onMouse = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect()
+      mouseRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    }
+    const onLeave = () => {
+      mouseRef.current = { x: -9999, y: -9999 }
+    }
+    const onTouch = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        const rect = canvas.getBoundingClientRect()
+        mouseRef.current = {
+          x: e.touches[0].clientX - rect.left,
+          y: e.touches[0].clientY - rect.top,
+        }
+      }
+    }
+
+    canvas.addEventListener('mousemove', onMouse)
+    canvas.addEventListener('mouseleave', onLeave)
+    canvas.addEventListener('touchmove', onTouch, { passive: true })
+    canvas.addEventListener('touchend', onLeave)
+
+    const io = new IntersectionObserver(([entry]) => {
+      activeRef.current = entry.isIntersecting
+    })
+    io.observe(canvas)
+
+    const onVis = () => {
+      activeRef.current = !document.hidden
+    }
+    document.addEventListener('visibilitychange', onVis)
+
+    const onResize = () => {
+      initNodes()
+    }
+    window.addEventListener('resize', onResize)
+
+    let lastTime = performance.now()
+
+    const draw = (now: number) => {
+      rafRef.current = requestAnimationFrame(draw)
+
+      if (!activeRef.current) return
+
+      const dt = Math.min((now - lastTime) / 1000, 0.05)
+      lastTime = now
+
+      const { w, h } = sizeRef.current
+      if (w === 0) return
+
+      const dpr = Math.min(window.devicePixelRatio, 2)
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      ctx.clearRect(0, 0, w, h)
+
+      const nodes = nodesRef.current
+      const t = now * 0.001
+
+      // Smooth cursor interpolation
+      const sm = smoothMouseRef.current
+      const m = mouseRef.current
+      sm.x += (m.x - sm.x) * 0.04
+      sm.y += (m.y - sm.y) * 0.04
+
+      // Update node positions — very subtle drift
+      for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i]
+        const driftX = Math.sin(t * 0.15 + n.seed) * 0.12
+        const driftY = Math.cos(t * 0.12 + n.seed * 1.7) * 0.1
+        const returnX = (n.homeX - n.x) * 0.008
+        const returnY = (n.homeY - n.y) * 0.008
+        n.vx = (n.vx + driftX + returnX) * 0.92
+        n.vy = (n.vy + driftY + returnY) * 0.92
+        n.x += n.vx * dt * 60 * 0.3
+        n.y += n.vy * dt * 60 * 0.3
+
+        // Subtle cursor attraction (not repulsion) for nearby nodes
+        const dx = sm.x - n.x
+        const dy = sm.y - n.y
+        const d2 = dx * dx + dy * dy
+        if (d2 < CURSOR_RADIUS * CURSOR_RADIUS && d2 > 1) {
+          const d = Math.sqrt(d2)
+          const pull = (1 - d / CURSOR_RADIUS) * 0.15
+          n.vx += (dx / d) * pull * dt * 60
+          n.vy += (dy / d) * pull * dt * 60
+        }
+      }
+
+      // Draw connections (static, pre-computed)
+      ctx.lineCap = 'round'
+      for (let i = 0; i < nodes.length; i++) {
+        const a = nodes[i]
+        for (let c = 0; c < a.connections.length; c++) {
+          const j = a.connections[c]
+          if (j <= i) continue // avoid duplicates
+          const b = nodes[j]
+
+          const abx = b.x - a.x
+          const aby = b.y - a.y
+          const dist = Math.sqrt(abx * abx + aby * aby)
+
+          // Check if either node is near cursor
+          const aNearCursor =
+            (sm.x - a.x) ** 2 + (sm.y - a.y) ** 2 < CURSOR_RADIUS * CURSOR_RADIUS
+          const bNearCursor =
+            (sm.x - b.x) ** 2 + (sm.y - b.y) ** 2 < CURSOR_RADIUS * CURSOR_RADIUS
+          const active = aNearCursor || bNearCursor
+
+          const alpha = Math.max(0, 0.12 - dist * 0.0003) * (active ? 2.5 : 1)
+          const col = active ? EDGE_ACTIVE_COLOR : EDGE_COLOR
+
+          ctx.beginPath()
+          ctx.moveTo(a.x, a.y)
+          ctx.lineTo(b.x, b.y)
+          ctx.strokeStyle = `rgba(${Math.round(col[0] * 255)},${Math.round(col[1] * 255)},${Math.round(col[2] * 255)},${alpha.toFixed(3)})`
+          ctx.lineWidth = active ? 0.8 : 0.5
+          ctx.stroke()
+        }
+      }
+
+      // Draw cursor connection (only 1-2 nearest nodes)
+      if (sm.x > 0 && sm.x < w && sm.y > 0 && sm.y < h) {
+        const nearest: { idx: number; dist: number }[] = []
+        for (let i = 0; i < nodes.length; i++) {
+          const dx = sm.x - nodes[i].x
+          const dy = sm.y - nodes[i].y
+          const d2 = dx * dx + dy * dy
+          if (d2 < CURSOR_RADIUS * CURSOR_RADIUS) {
+            nearest.push({ idx: i, dist: d2 })
+          }
+        }
+        nearest.sort((a, b) => a.dist - b.dist)
+        const take = Math.min(2, nearest.length)
+
+        for (let k = 0; k < take; k++) {
+          const n = nodes[nearest[k].idx]
+          const fade = 1 - Math.sqrt(nearest[k].dist) / CURSOR_RADIUS
+          const alpha = fade * 0.25
+          ctx.beginPath()
+          ctx.moveTo(sm.x, sm.y)
+          ctx.lineTo(n.x, n.y)
+          ctx.strokeStyle = `rgba(130,200,255,${alpha.toFixed(3)})`
+          ctx.lineWidth = 0.6
+          ctx.stroke()
+        }
+
+        // Spawn occasional pulse along cursor connections
+        if (Math.random() < 0.02 && nearest.length > 0) {
+          const target = nodes[nearest[0].idx]
+          pulsesRef.current.push({
+            fromIdx: -1,
+            toIdx: nearest[0].idx,
+            t: 0,
+            speed: 0.6 + Math.random() * 0.4,
+          })
+        }
+      }
+
+      // Draw signal pulses along edges
+      const pulses = pulsesRef.current
+      for (let p = pulses.length - 1; p >= 0; p--) {
+        const pu = pulses[p]
+        pu.t += dt * pu.speed
+
+        if (pu.t >= 1) {
+          pulses.splice(p, 1)
+          continue
+        }
+
+        let sx: number, sy: number, ex: number, ey: number
+        if (pu.fromIdx === -1) {
+          // From cursor
+          sx = sm.x
+          sy = sm.y
+          ex = nodes[pu.toIdx].x
+          ey = nodes[pu.toIdx].y
+        } else {
+          sx = nodes[pu.fromIdx].x
+          sy = nodes[pu.fromIdx].y
+          ex = nodes[pu.toIdx].x
+          ey = nodes[pu.toIdx].y
+        }
+
+        const px = sx + (ex - sx) * pu.t
+        const py = sy + (ey - sy) * pu.t
+        const alpha = Math.sin(pu.t * Math.PI) * 0.7
+
+        ctx.beginPath()
+        ctx.arc(px, py, 1.8, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(140,210,255,${alpha.toFixed(3)})`
+        ctx.fill()
+      }
+
+      // Spawn pulses along static edges occasionally
+      if (Math.random() < 0.008) {
+        const i = Math.floor(Math.random() * nodes.length)
+        const a = nodes[i]
+        if (a.connections.length > 0) {
+          const j = a.connections[Math.floor(Math.random() * a.connections.length)]
+          pulsesRef.current.push({
+            fromIdx: i,
+            toIdx: j,
+            t: 0,
+            speed: 0.4 + Math.random() * 0.3,
+          })
+        }
+      }
+
+      // Draw nodes
+      for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i]
+        const dx = sm.x - n.x
+        const dy = sm.y - n.y
+        const d2 = dx * dx + dy * dy
+        const nearCursor = d2 < CURSOR_RADIUS * CURSOR_RADIUS
+        const boost = nearCursor ? (1 - Math.sqrt(d2) / CURSOR_RADIUS) : 0
+
+        const r = n.radius * (1 + boost * 0.4)
+        const col = nearCursor
+          ? NODE_ACTIVE_COLOR.map((c, k) => c + (NODE_COLOR[k] - c) * (1 - boost))
+          : NODE_DIM_COLOR.map((c, k) => c + (NODE_COLOR[k] - c) * 0.3)
+
+        // Glow
+        const glowR = r * (3 + boost * 3)
+        const glowAlpha = 0.08 + boost * 0.15
+        const gradient = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, glowR)
+        gradient.addColorStop(0, `rgba(${Math.round(col[0] * 255)},${Math.round(col[1] * 255)},${Math.round(col[2] * 255)},${glowAlpha.toFixed(3)})`)
+        gradient.addColorStop(1, `rgba(${Math.round(col[0] * 255)},${Math.round(col[1] * 255)},${Math.round(col[2] * 255)},0)`)
+        ctx.beginPath()
+        ctx.arc(n.x, n.y, glowR, 0, Math.PI * 2)
+        ctx.fillStyle = gradient
+        ctx.fill()
+
+        // Core dot
+        const pulse = 1 + Math.sin(t * 1.5 + n.seed) * 0.08
+        ctx.beginPath()
+        ctx.arc(n.x, n.y, r * pulse, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(${Math.round(col[0] * 255)},${Math.round(col[1] * 255)},${Math.round(col[2] * 255)},${(0.7 + boost * 0.3).toFixed(3)})`
+        ctx.fill()
+      }
+
+      // Cursor orb
+      if (sm.x > 0 && sm.x < w && sm.y > 0 && sm.y < h) {
+        const orbGrad = ctx.createRadialGradient(sm.x, sm.y, 0, sm.x, sm.y, 24)
+        orbGrad.addColorStop(0, 'rgba(140,210,255,0.18)')
+        orbGrad.addColorStop(0.5, 'rgba(140,210,255,0.06)')
+        orbGrad.addColorStop(1, 'rgba(140,210,255,0)')
+        ctx.beginPath()
+        ctx.arc(sm.x, sm.y, 24, 0, Math.PI * 2)
+        ctx.fillStyle = orbGrad
+        ctx.fill()
+
+        const orbPulse = 2.2 + Math.sin(t * 2.5) * 0.4
+        ctx.beginPath()
+        ctx.arc(sm.x, sm.y, orbPulse, 0, Math.PI * 2)
+        ctx.fillStyle = 'rgba(180,225,255,0.7)'
+        ctx.fill()
+      }
+    }
+
+    rafRef.current = requestAnimationFrame(draw)
+
+    return () => {
+      cancelAnimationFrame(rafRef.current)
+      canvas.removeEventListener('mousemove', onMouse)
+      canvas.removeEventListener('mouseleave', onLeave)
+      canvas.removeEventListener('touchmove', onTouch)
+      canvas.removeEventListener('touchend', onLeave)
+      window.removeEventListener('resize', onResize)
+      document.removeEventListener('visibilitychange', onVis)
+      io.disconnect()
+    }
+  }, [initNodes])
+
   return (
-    <div ref={container} className={className} aria-hidden="true">
-      <Canvas
-        frameloop={quality.reduced ? 'demand' : 'always'}
-        dpr={quality.dpr}
-        camera={{ position: [0, 0, 26], fov: 48, near: 0.1, far: 80 }}
-        gl={{ antialias: false, alpha: true, powerPreference: 'high-performance' }}
+    <div className={className} aria-hidden="true">
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 h-full w-full"
         style={{ background: 'transparent' }}
-        eventSource={typeof document !== 'undefined' ? document.body : undefined}
-      >
-        <NeuralField quality={quality} active={active} />
-      </Canvas>
+      />
     </div>
   )
 }
