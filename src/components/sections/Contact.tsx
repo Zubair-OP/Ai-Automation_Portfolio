@@ -87,9 +87,9 @@ export function Contact() {
   }
 
   return (
-    <section id="contact" className="relative scroll-mt-24 border-t border-white/[0.06] py-24 lg:py-32">
+    <section id="contact" className="relative scroll-mt-24 border-t border-white/[0.06] py-14 lg:py-20">
       <div className="mx-auto max-w-8xl px-5 sm:px-6 lg:px-10">
-        <div className="grid gap-14 lg:grid-cols-12 lg:gap-16">
+        <div className="grid gap-12 lg:grid-cols-12 lg:gap-14">
           {/* Left — editorial CTA + channels */}
           <div className="lg:col-span-6">
             <SectionHead
@@ -108,7 +108,7 @@ export function Contact() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8, ease: EASE, delay: 0.1 }}
-              className="mt-8 max-w-md text-[15px] leading-[1.85] text-ink-mute"
+              className="mt-6 max-w-md text-[15px] leading-[1.85] text-ink-mute"
             >
               Product to ship, AI feature to wire up, or a business process that needs to stop
               eating hours? Send a note — I reply within a day.
@@ -119,7 +119,7 @@ export function Contact() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8, ease: EASE, delay: 0.2 }}
-              className="mt-12"
+              className="mt-8"
             >
               <ContactLink icon={<MailIcon className="h-4 w-4" />} label="Email" value={PERSON.email} href={`https://mail.google.com/mail/?view=cm&fs=1&to=${PERSON.email}`} external />
               <ContactLink icon={<LinkedinIcon className="h-4 w-4" />} label="LinkedIn" value={PERSON.linkedinHandle} href={PERSON.linkedin} external />

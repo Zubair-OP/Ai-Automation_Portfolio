@@ -22,8 +22,8 @@ export function Footer() {
 
   return (
     <footer className="border-t border-white/[0.06]">
-      <div className="mx-auto max-w-8xl px-5 py-14 sm:px-6 lg:px-10">
-        <div className="flex flex-col gap-10 md:flex-row md:items-end md:justify-between">
+      <div className="mx-auto max-w-8xl px-5 py-10 sm:px-6 lg:px-10">
+        <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
           <div>
             <a href="#home" className="flex items-center gap-2.5">
               <span className="font-display text-[1.4rem] font-medium tracking-[-0.02em] text-ink">
@@ -50,7 +50,7 @@ export function Footer() {
           </nav>
         </div>
 
-        <div className="mt-12 flex flex-col gap-5 border-t border-white/[0.08] pt-7 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-8 flex flex-col gap-5 border-t border-white/[0.08] pt-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <a href={PERSON.github} target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="grid h-9 w-9 place-items-center rounded-full border border-white/10 text-ink-soft transition-colors duration-500 hover:border-accent-mint/40 hover:text-accent-mint">
               <GithubIcon className="h-4 w-4" />
