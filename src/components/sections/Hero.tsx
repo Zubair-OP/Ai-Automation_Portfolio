@@ -171,7 +171,7 @@ export function Hero() {
                         Muhammad Zubair
                       </div>
                       <div className="mt-1 font-mono text-[11px] text-ink-faint">
-                        @Zubair-OP · CS @ COMSATS
+                        @Zubair-OP · Full-Stack &amp; AI Automation
                       </div>
                     </div>
                     <span className="grid h-11 w-11 place-items-center rounded-full border border-accent-mint/25 bg-accent-mint/[0.07] text-accent-mint">

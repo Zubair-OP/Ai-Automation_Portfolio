@@ -5,7 +5,16 @@ import { SectionHead } from '@/components/ui/SectionHead'
 import { Reveal } from '@/components/ui/Reveal'
 import { PIPELINE, AUTOMATION_SYSTEMS } from '@/data/services'
 import { EASE } from '@/lib/motion'
-import { NodeGlyph } from '@/components/ui/icons'
+import { NodeGlyph, SyncIcon, UserXIcon, UnlinkIcon, PenIcon, BrainIcon, GaugeIcon } from '@/components/ui/icons'
+
+const CARD_ICONS = {
+  sync: SyncIcon,
+  leads: UserXIcon,
+  unlink: UnlinkIcon,
+  pen: PenIcon,
+  brain: BrainIcon,
+  scale: GaugeIcon,
+}
 
 /* Desktop pipeline SVG — 5 nodes, animated flowing dashes + traveling pulses */
 function PipelineSvg() {
@@ -90,7 +99,7 @@ function VerticalPipeline() {
 
 export function Automation() {
   return (
-    <section id="automation" className="relative scroll-mt-24 border-t border-white/[0.06] py-24 lg:py-32">
+    <section id="automation" className="relative scroll-mt-24 border-t border-white/[0.06] py-14 lg:py-20">
       <div className="mx-auto max-w-8xl px-5 sm:px-6 lg:px-10">
         <SectionHead
           index="03"
@@ -111,10 +120,10 @@ export function Automation() {
         />
 
         {/* Pipeline */}
-        <Reveal className="mt-16">
+        <Reveal className="mt-10">
           <div className="bezel">
-            <div className="bezel-core p-6 sm:p-10">
-              <div className="flex items-center justify-between border-b border-white/[0.06] pb-5">
+            <div className="bezel-core p-6 sm:p-8">
+              <div className="flex items-center justify-between border-b border-white/[0.06] pb-4">
                 <span className="font-mono text-[10px] uppercase tracking-mega text-ink-faint">
                   automation://engine
                 </span>
@@ -123,41 +132,50 @@ export function Automation() {
                   running
                 </span>
               </div>
-              <div className="hidden md:block pt-8">
+              <div className="hidden md:block pt-6">
                 <PipelineSvg />
               </div>
-              <div className="pt-8 md:hidden">
+              <div className="pt-6 md:hidden">
                 <VerticalPipeline />
               </div>
             </div>
           </div>
         </Reveal>
 
-        {/* Capability cards */}
-        <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {AUTOMATION_SYSTEMS.map((sys, i) => (
-            <Reveal key={sys.title} delay={i % 3} className="h-full">
-              <motion.div
-                whileHover={{ y: -4 }}
-                transition={{ duration: 0.5, ease: EASE }}
-                className="group flex h-full flex-col justify-between rounded-3xl border border-white/[0.07] bg-white/[0.02] p-6 transition-colors duration-500 hover:border-accent-amber/30"
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="rounded-full border border-accent-amber/25 bg-accent-amber/[0.06] px-3 py-1 font-mono text-[9.5px] uppercase tracking-[0.18em] text-accent-amber">
-                      {sys.tag}
-                    </span>
-                    <span className="font-mono text-[11px] text-ink-faint">0{i + 1}</span>
+        {/* Bottleneck cards */}
+        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {AUTOMATION_SYSTEMS.map((sys, i) => {
+            const IconComponent = CARD_ICONS[sys.icon] || SyncIcon
+            return (
+              <Reveal key={sys.title} delay={i % 3} className="h-full">
+                <motion.div
+                  whileHover={{ y: -4 }}
+                  transition={{ duration: 0.5, ease: EASE }}
+                  className="group flex h-full flex-col justify-between rounded-3xl border border-white/[0.07] bg-white/[0.02] p-7 transition-colors duration-500 hover:border-accent-mint/40 hover:bg-white/[0.035]"
+                >
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <div className="grid h-12 w-12 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] text-ink-soft transition-colors duration-500 group-hover:border-accent-mint/40 group-hover:bg-accent-mint/[0.08] group-hover:text-accent-mint">
+                        <IconComponent className="h-5 w-5" />
+                      </div>
+                      <span className="rounded-full border border-white/[0.08] bg-white/[0.02] px-3 py-1 font-mono text-[9.5px] uppercase tracking-[0.18em] text-ink-faint transition-colors duration-500 group-hover:border-accent-mint/30 group-hover:text-accent-mint">
+                        {sys.tag}
+                      </span>
+                    </div>
+
+                    <h3 className="mt-6 font-display text-[1.2rem] font-medium leading-snug tracking-[-0.01em] text-ink transition-colors duration-500 group-hover:text-white">
+                      {sys.title}
+                    </h3>
+                    <p className="mt-2.5 text-[13.5px] leading-relaxed text-ink-mute transition-colors duration-500 group-hover:text-ink-soft">
+                      {sys.desc}
+                    </p>
                   </div>
-                  <h3 className="mt-5 font-display text-[1.15rem] leading-snug tracking-[-0.01em] text-ink">
-                    {sys.title}
-                  </h3>
-                  <p className="mt-2.5 text-[13px] leading-relaxed text-ink-mute">{sys.desc}</p>
-                </div>
-                <div className="mt-6 h-px w-full bg-white/[0.06] transition-colors duration-500 group-hover:bg-accent-amber/30" />
-              </motion.div>
-            </Reveal>
-          ))}
+
+                  <div className="mt-6 h-px w-full bg-white/[0.06] transition-colors duration-500 group-hover:bg-accent-mint/30" />
+                </motion.div>
+              </Reveal>
+            )
+          })}
         </div>
       </div>
     </section>

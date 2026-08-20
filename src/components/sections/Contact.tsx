@@ -97,7 +97,7 @@ export function Contact() {
               name="Contact"
               title={
                 <>
-                  Have a workflow worth automating?
+                  Want to automate your workflow?
                   <br />
                   <span className="text-glow">Let&apos;s build it.</span>
                 </>

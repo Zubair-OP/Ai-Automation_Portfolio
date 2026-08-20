@@ -8,7 +8,7 @@ const PHASES = ['Build', 'Learn', 'Ship']
 
 export function Journey() {
   return (
-    <section id="journey" className="relative scroll-mt-24 border-t border-white/[0.06] py-24 lg:py-32">
+    <section id="journey" className="relative scroll-mt-24 border-t border-white/[0.06] py-14 lg:py-20">
       <div className="mx-auto max-w-8xl px-5 sm:px-6 lg:px-10">
         <SectionHead
           index="05"
@@ -25,7 +25,7 @@ export function Journey() {
           }
         />
 
-        <div className="relative mt-16">
+        <div className="relative mt-10">
           {/* Rail */}
           <div className="absolute bottom-2 left-[13px] top-2 w-px bg-white/[0.08] md:left-[17px]" />
 
@@ -73,7 +73,7 @@ export function Journey() {
         </div>
 
         {/* Build → Learn → Ship */}
-        <Reveal className="mt-16">
+        <Reveal className="mt-10">
           <div className="flex flex-col gap-px overflow-hidden rounded-3xl border border-white/[0.07] bg-white/[0.07] sm:flex-row">
             {PHASES.map((p, i) => (
               <div key={p} className="flex flex-1 items-center justify-between bg-graphite-900 px-6 py-5">

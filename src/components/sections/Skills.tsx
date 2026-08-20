@@ -6,7 +6,7 @@ import { SkillTicker } from '@/components/SkillTicker'
 
 export function Skills() {
   return (
-    <section id="skills" className="relative scroll-mt-24 border-t border-white/[0.06] py-24 lg:py-32">
+    <section id="skills" className="relative scroll-mt-24 border-t border-white/[0.06] py-14 lg:py-20">
       <div className="mx-auto max-w-8xl px-5 sm:px-6 lg:px-10">
         <SectionHead
           index="04"

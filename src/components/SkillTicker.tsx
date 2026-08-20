@@ -32,7 +32,7 @@ function TickerRow({ items, dir, label }: { items: string[]; dir: 'l' | 'r'; lab
 
 export function SkillTicker() {
   return (
-    <div className="mt-14 space-y-1 border-y border-white/[0.06] py-4">
+    <div className="mt-8 space-y-1 border-y border-white/[0.06] py-3">
       {rows.map((r) => (
         <TickerRow key={r.label} items={r.items} dir={r.dir} label={r.label} />
       ))}

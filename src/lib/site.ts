@@ -12,7 +12,7 @@ export const PERSON = {
   email: 'zbrlgnd@gmail.com',
   whatsappNumber: '923495573970',
   whatsappDisplay: '+92 349 5573970',
-  upworkHandle: 'MERN-Stack Developer',
+  upworkHandle: 'Full-Stack Web Dev & AI Automation',
   resumePath: '/Muhammad-Zubair-Resume.pdf',
   siteUrl: 'https://mzubair.dev',
 } as const

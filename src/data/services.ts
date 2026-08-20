@@ -36,37 +36,44 @@ export interface AutomationSystem {
   title: string
   desc: string
   tag: string
+  icon: 'sync' | 'leads' | 'unlink' | 'pen' | 'brain' | 'scale'
 }
 
 export const AUTOMATION_SYSTEMS: AutomationSystem[] = [
   {
-    title: 'AI Agent Orchestration Platform',
-    desc: 'A coordination layer where autonomous AI agents split, delegate, and solve one brief in real time.',
-    tag: 'Agents',
-  },
-  {
-    title: 'AI Chat Assistant',
-    desc: 'Streaming chat experience with live token flow, voice input, and per-session memory.',
-    tag: 'Realtime AI',
-  },
-  {
-    title: 'E-commerce AI Assistant',
-    desc: 'Shopping assistant wired into product data through a LangChain prompt graph.',
-    tag: 'RAG',
-  },
-  {
-    title: 'Workflow Automation Suite',
-    desc: 'Custom n8n automations, webhook integrations, and pipelines connecting your entire tech stack.',
+    title: 'Repetitive Admin Tasks',
+    desc: 'Hours lost on tasks that should run themselves.',
     tag: 'Automation',
+    icon: 'sync',
   },
   {
-    title: 'AI Voice Calling Agent',
-    desc: 'Real-time conversational voice bot for automated inbound and outbound calling.',
-    tag: 'Voice',
+    title: 'Lost Leads & Slow Follow-ups',
+    desc: 'Potential clients slipping through the cracks.',
+    tag: 'Sales & CRM',
+    icon: 'leads',
   },
   {
-    title: 'AI Classification & Routing Engine',
-    desc: 'Models that read intent from short input and route to the right outcome — like Moodify.',
-    tag: 'ML',
+    title: 'Disconnected Tools',
+    desc: 'Data stuck in silos with no integration.',
+    tag: 'Integrations',
+    icon: 'unlink',
+  },
+  {
+    title: 'Manual Content Creation',
+    desc: 'Creating every post, email, and asset by hand.',
+    tag: 'AI Workflows',
+    icon: 'pen',
+  },
+  {
+    title: 'No AI in Operations',
+    desc: 'Competitors are automating — you\'re not.',
+    tag: 'AI Operations',
+    icon: 'brain',
+  },
+  {
+    title: 'Scaling Bottlenecks',
+    desc: 'Growing headcount instead of scaling systems automatically.',
+    tag: 'Efficiency',
+    icon: 'scale',
   },
 ]
