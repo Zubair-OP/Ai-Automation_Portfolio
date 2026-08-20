@@ -121,7 +121,7 @@ export function Contact() {
               transition={{ duration: 0.8, ease: EASE, delay: 0.2 }}
               className="mt-12"
             >
-              <ContactLink icon={<MailIcon className="h-4 w-4" />} label="Email" value={PERSON.email} href={`mailto:${PERSON.email}`} />
+              <ContactLink icon={<MailIcon className="h-4 w-4" />} label="Email" value={PERSON.email} href={`https://mail.google.com/mail/?view=cm&fs=1&to=${PERSON.email}`} external />
               <ContactLink icon={<LinkedinIcon className="h-4 w-4" />} label="LinkedIn" value={PERSON.linkedinHandle} href={PERSON.linkedin} external />
               <ContactLink icon={<GithubIcon className="h-4 w-4" />} label="GitHub" value={PERSON.githubHandle} href={PERSON.github} external />
               <ContactLink icon={<UpworkIcon className="h-4 w-4" />} label="Upwork" value={PERSON.upworkHandle} href="#" />

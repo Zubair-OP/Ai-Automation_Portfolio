@@ -9,7 +9,7 @@ export const SKILLS: SkillGroup[] = [
   {
     group: 'Frontend',
     label: 'Interfaces',
-    items: ['HTML', 'CSS', 'JavaScript', 'React', 'Tailwind CSS'],
+    items: ['HTML', 'CSS', 'JavaScript', 'React', 'Next.js', 'TypeScript', 'Tailwind CSS', 'Redux Toolkit', 'Context API', 'GSAP', 'Framer Motion', 'Locomotive Scroll'],
     note: 'Responsive, accessible product UI with a taste for detail.',
   },
   {

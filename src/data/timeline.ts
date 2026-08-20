@@ -8,7 +8,7 @@ export interface TimelineEntry {
 
 export const TIMELINE: TimelineEntry[] = [
   {
-    when: '2024',
+    when: '2025',
     role: 'Frontend Web Developer — Intern',
     org: 'DevelopersHub Corporation',
     note: 'Shipping production React interfaces for client work. Learning to ship under real deadlines.',
@@ -22,7 +22,7 @@ export const TIMELINE: TimelineEntry[] = [
     tag: 'Education',
   },
   {
-    when: '2025',
+    when: '2026',
     role: 'AI-Powered Cohort 2.0',
     org: 'Sheryians Coding School',
     note: 'Went full-stack here — Node, Express, MongoDB, system design, clean API architecture, and AI/LLM integrations.',
@@ -30,7 +30,7 @@ export const TIMELINE: TimelineEntry[] = [
   },
   {
     when: 'Ongoing',
-    role: 'MERN Stack Freelance',
+    role: 'Freelance Full-Stack Web Developer & AI Automation',
     org: 'Upwork',
     note: 'Full-stack web development and AI automation — building production products and intelligent workflows for clients.',
     tag: 'Client work',

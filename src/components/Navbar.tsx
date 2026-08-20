@@ -179,7 +179,7 @@ export function Navbar() {
                 <a href={PERSON.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="grid h-10 w-10 place-items-center rounded-full border border-white/10 text-ink-soft transition-colors duration-500 hover:text-accent-mint">
                   <LinkedinIcon className="h-[18px] w-[18px]" />
                 </a>
-                <a href={`mailto:${PERSON.email}`} aria-label="Email" className="grid h-10 w-10 place-items-center rounded-full border border-white/10 text-ink-soft transition-colors duration-500 hover:text-accent-mint">
+                <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${PERSON.email}`} target="_blank" rel="noopener noreferrer" aria-label="Email" className="grid h-10 w-10 place-items-center rounded-full border border-white/10 text-ink-soft transition-colors duration-500 hover:text-accent-mint">
                   <MailIcon className="h-[18px] w-[18px]" />
                 </a>
               </div>
