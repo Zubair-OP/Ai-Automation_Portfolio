@@ -30,7 +30,7 @@ export function Footer() {
                 Zubair<span className="text-accent-mint">.</span>
               </span>
             </a>
-            <p className="mt-3 max-w-sm text-[13.5px] leading-relaxed text-ink-mute">
+            <p className="mt-3 max-w-sm text-[13.5px] leading-relaxed text-ink-soft">
               Full-stack developer & AI automation engineer. Building software and systems that
               replace busywork with intelligence.
             </p>
@@ -41,7 +41,7 @@ export function Footer() {
               <a
                 key={item.id}
                 href={item.href}
-                className="group inline-flex items-center gap-1 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-faint transition-colors duration-500 hover:text-ink"
+                className="group inline-flex items-center gap-1 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-soft transition-colors duration-500 hover:text-accent-mint"
               >
                 {item.label}
                 <ArrowUpRight className="h-3 w-3 opacity-0 transition-all duration-500 group-hover:opacity-100" />
@@ -50,7 +50,7 @@ export function Footer() {
           </nav>
         </div>
 
-        <div className="mt-12 flex flex-col gap-5 border-t border-white/[0.06] pt-7 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-12 flex flex-col gap-5 border-t border-white/[0.08] pt-7 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <a href={PERSON.github} target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="grid h-9 w-9 place-items-center rounded-full border border-white/10 text-ink-soft transition-colors duration-500 hover:border-accent-mint/40 hover:text-accent-mint">
               <GithubIcon className="h-4 w-4" />
@@ -60,10 +60,10 @@ export function Footer() {
             </a>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-faint">
-            <span>© {new Date().getFullYear()} Muhammad Zubair</span>
-            <span className="hidden sm:inline">·</span>
-            <span className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft">
+            <span>© {new Date().getFullYear()} <strong className="font-semibold text-ink">Muhammad Zubair</strong></span>
+            <span className="hidden text-ink-faint sm:inline">·</span>
+            <span className="flex items-center gap-2 text-ink">
               <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-accent-mint" />
               {date} {time} PKT
             </span>

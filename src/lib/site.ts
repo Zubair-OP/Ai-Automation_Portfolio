@@ -28,9 +28,9 @@ export const NAV = [
 
 export const STATS = [
   { num: 5, suffix: '+', label: 'Shipped projects' },
-  { num: 8, suffix: '+', label: 'Tools in rotation' },
-  { num: 10, suffix: '+', label: 'Months building' },
-  { num: 5, suffix: '+', label: 'GitHub repos shipped' },
+  { num: 10, suffix: '+', label: 'Tools in rotation' },
+  { num: 12, suffix: '+', label: 'Months building' },
+  { num: 45, suffix: '+', label: 'GitHub repos shipped' },
 ] as const
 
 export const NOW = [
