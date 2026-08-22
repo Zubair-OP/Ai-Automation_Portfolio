@@ -42,6 +42,109 @@ function ChatVisual() {
   )
 }
 
+function InvoiceVisual() {
+  const FLOW = ['AI Parse', 'PDF Render', 'Email', 'Auto-Remind']
+  return (
+    <div className="relative flex h-full min-h-[190px] flex-col justify-center overflow-hidden p-5">
+      <div className="absolute inset-0 dots-faint opacity-40" />
+      <div className="absolute -top-10 left-1/4 h-36 w-36 rounded-full bg-accent-mint/[0.06] blur-3xl" />
+
+      <div className="mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.2em] text-ink-faint">
+        groq parse · playwright pdf · brevo delivery
+      </div>
+
+      {/* Mini invoice document */}
+      <motion.div
+        initial={{ y: 18, opacity: 0 }}
+        whileInView={{ y: 0, opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.7, ease: EASE }}
+        className="relative rounded-xl border border-white/[0.08] bg-graphite-850/90 p-4"
+      >
+        <div className="flex items-center justify-between">
+          <span className="font-mono text-[10px] tracking-[0.08em] text-accent-mint">INV-2026-101</span>
+          <span className="flex items-center gap-1.5 rounded-full border border-accent-mint/25 bg-accent-mint/[0.07] px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.14em] text-accent-mint">
+            <span className="h-1 w-1 animate-pulse-dot rounded-full bg-accent-mint" />
+            reminder armed
+          </span>
+        </div>
+
+        <div className="mt-3 space-y-2">
+          {[
+            { label: 'Next.js UI/UX Redesign', meta: '40 hrs × $95', w: '82%' },
+            { label: 'API Integration', meta: '12 hrs × $80', w: '58%' },
+          ].map((row, i) => (
+            <motion.div
+              key={row.label}
+              initial={{ scaleX: 0, opacity: 0 }}
+              whileInView={{ scaleX: 1, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, ease: EASE, delay: 0.15 + i * 0.12 }}
+              style={{ width: row.w }}
+              className="origin-left"
+            >
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="truncate text-[11px] text-ink-soft">{row.label}</span>
+                <span className="font-mono text-[9.5px] text-ink-faint">{row.meta}</span>
+              </div>
+              <div className="mt-1 h-1 rounded-full bg-white/[0.07]">
+                <motion.div
+                  initial={{ scaleX: 0 }}
+                  whileInView={{ scaleX: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.7, ease: EASE, delay: 0.3 + i * 0.12 }}
+                  className="h-full origin-left rounded-full bg-accent-mint/60"
+                />
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, ease: EASE, delay: 0.55 }}
+          className="mt-3 flex items-center justify-between border-t border-white/[0.07] pt-2.5"
+        >
+          <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-ink-faint">
+            CGST 9% + SGST 9%
+          </span>
+          <span className="font-display text-[13px] font-medium tabular-nums text-ink">
+            $4,484<span className="text-accent-mint">.00</span>
+          </span>
+        </motion.div>
+      </motion.div>
+
+      {/* Automation flow strip */}
+      <motion.div
+        initial={{ y: 12, opacity: 0 }}
+        whileInView={{ y: 0, opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.7, ease: EASE, delay: 0.45 }}
+        className="mt-3.5 flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-2.5"
+      >
+        {FLOW.map((step, i) => (
+          <div key={step} className="flex items-center gap-2">
+            <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-ink-faint sm:text-[9.5px]">
+              {step}
+            </span>
+            {i < FLOW.length - 1 && (
+              <span className="relative h-px w-4 overflow-hidden bg-white/10 sm:w-6">
+                <motion.span
+                  animate={{ x: ['-100%', '100%'] }}
+                  transition={{ duration: 1.8, repeat: Infinity, ease: 'linear', delay: i * 0.35 }}
+                  className="absolute inset-y-0 w-full bg-accent-mint/70"
+                />
+              </span>
+            )}
+          </div>
+        ))}
+      </motion.div>
+    </div>
+  )
+}
+
 function HubVisual() {
   return (
     <div className="relative flex h-full min-h-[190px] items-center justify-center overflow-hidden p-5">
@@ -136,6 +239,7 @@ function ClassifyVisual() {
 
 const VISUALS = {
   chat: ChatVisual,
+  invoice: InvoiceVisual,
   hub: HubVisual,
   wave: WaveVisual,
   classify: ClassifyVisual,
